@@ -1,6 +1,11 @@
 import './App.css';
 import React, { useState, useEffect } from 'react';
-import { Button, EditableText, InputGroup} from '@blueprintjs/core';
+import { Button, EditableText, InputGroup, Toaster } from '@blueprintjs/core';
+
+const AppToaster = Toaster.create({
+    position: "top"
+})
+
 function App() {
 
     const [users, setUsers] = useState([]);
@@ -22,16 +27,83 @@ function App() {
 
         if (name && email && website) {
             fetch('https://jsonplaceholder.typicode.com/users',
-            {
-                method: 'POST',
-                body: JSON.stringify({
-                    name, //key and value are in the same name so, don't need to write the key name 
-                    email,
-                    website
-                })
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name, //key and value are in the same name so, don't need to write the key name 
+                        email,
+                        website
+                    }),
+                    headers: {
+                        "Content-Type": "application/json; charset=utf-8"
+                    }
+                }
+            ).then((response) => response.json())
+                .then(data => {
+                    setUsers([...users, data]);
+                    AppToaster.show({
+                        message: "User Added Successfully",
+                        intent: "success",
+                        timeout: 3000
+                    })
+                    setNewName("");
+                    setNewEmail("");
+                    setNewWebsite("");
             })
         }
     } 
+
+
+    function onChangeHandler(id, key, value) {
+        setUsers((users) => {
+            return users.map((user) => {
+                return user.id === id ? {...user, [key]: value } : user;
+            })
+        })
+    }
+
+    function updateUser(id) {
+        const user = users.find(user => user.id === id);
+        id = id % 10;
+        fetch(`https://jsonplaceholder.typicode.com/users/${id}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(user ),
+                headers: {
+                    "Content-Type": "application/json; charset=utf-8"
+                }
+            }
+        ).then((response) => response.json())
+            .then(data => {
+                AppToaster.show({
+                    message: "User Updated Successfully",
+                    intent: "success",
+                    timeout: 3000
+                })
+        })
+    }
+
+    function deleteUser(id) {
+        const user = users.find(user => user.id === id);
+        id = id % 10;
+        fetch(`https://jsonplaceholder.typicode.com/users/${id}`,
+            {
+                method: 'DELETE',
+            }
+        ).then((response) => response.json())
+            .then(data => {
+
+                setUsers((users) => {
+                    return users.filter(user => user.id !== id);
+                })
+
+                AppToaster.show({
+                    message: "User Deleted Successfully",
+                    intent: "success",
+                    timeout: 3000
+                })
+        })
+    }
 
   return (
     <div className="App">
@@ -48,10 +120,11 @@ function App() {
                       <tr key={user.id}>
                           <td>{user.id}</td>
                           <td>{user.name}</td>
-                          <td><EditableText value={user.email}/></td>
-                          <td><EditableText value={user.website}/></td>
-                          <td><Button intent='primary'>Update</Button>
-                              <Button intent='danger'>Delete</Button>  </td>
+                          <td><EditableText  onChange={value =>onChangeHandler(user.id, "email", value)}  value={user.email}/></td>
+                          <td><EditableText  onChange={value =>onChangeHandler(user.id, "website", value)}  value={user.website}/></td>
+                          <td><Button intent='primary' onClick={() => updateUser(user.id)}>Update</Button>
+                              &nbsp;
+                              <Button intent='danger'  onClick={()=> deleteUser(user.id)}>Delete</Button>  </td>
                       </tr>
                   )}
               </tbody>
@@ -80,7 +153,7 @@ function App() {
                           />
                       </td>
                       <td>
-                          <Button intent='sucess' onClick={addUser}>
+                          <Button intent='success' onClick={addUser}>
                               Add User
                           </Button>
                       </td>
